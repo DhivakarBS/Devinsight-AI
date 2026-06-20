@@ -1,0 +1,26 @@
+{
+  "project": {
+    "name": "devinsight-ai-backend",
+    "description": "DevInsight AI FastAPI backend deployment"
+  },
+  "services": [
+    {
+      "name": "backend",
+      "type": "docker",
+      "build": {
+        "builder": "Dockerfile",
+        "context": "."
+      },
+      "run": {
+        "startCommand": "gunicorn -k uvicorn.workers.UvicornWorker backend.main:app --bind 0.0.0.0:$PORT --workers 4"
+      },
+      "env": {
+        "DATABASE_URL": "",
+        "JWT_SECRET_KEY": "",
+        "CORS_ORIGINS": "",
+        "GITHUB_TOKEN": "",
+        "GEMINI_API_KEY": ""
+      }
+    }
+  ]
+}

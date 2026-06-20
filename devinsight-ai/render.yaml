@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: devinsight-ai-backend
+    env: python
+    branch: main
+    plan: starter
+    region: oregon
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: gunicorn -k uvicorn.workers.UvicornWorker backend.main:app --bind 0.0.0.0:$PORT --workers 4
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        value: ""
+        type: secret
+      - key: JWT_SECRET_KEY
+        value: ""
+        type: secret
+      - key: CORS_ORIGINS
+        value: ""
+        type: secret
+      - key: GITHUB_TOKEN
+        value: ""
+        type: secret
+      - key: GEMINI_API_KEY
+        value: ""
+        type: secret
