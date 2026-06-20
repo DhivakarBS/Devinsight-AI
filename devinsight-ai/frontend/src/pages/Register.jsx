@@ -8,62 +8,30 @@ function Register() {
   const [password, setPassword] = useState("");
 
   const handleRegister = async () => {
-
-    try {
-
-      await api.post("/register", {
+  try {
+    const response = await api.post(
+      "/api/auth/register",
+      {
         username,
         email,
-        password
-      });
+        password,
+      }
+    );
 
-      alert("Registered Successfully");
+    console.log(response.data);
 
-    } catch (error) {
+    alert("Registered Successfully ✅");
 
-      console.error(error);
-      alert("Registration Failed");
+  } catch (error) {
+    console.error(error);
 
+    if (error.response) {
+      alert(error.response.data.detail);
+    } else {
+      alert("Registration Failed ❌");
     }
-  };
-
-  return (
-    <div style={{ padding: "40px" }}>
-      <h1>Register</h1>
-
-      <input
-        placeholder="Username"
-        onChange={(e) =>
-          setUsername(e.target.value)
-        }
-      />
-
-      <br /><br />
-
-      <input
-        placeholder="Email"
-        onChange={(e) =>
-          setEmail(e.target.value)
-        }
-      />
-
-      <br /><br />
-
-      <input
-        type="password"
-        placeholder="Password"
-        onChange={(e) =>
-          setPassword(e.target.value)
-        }
-      />
-
-      <br /><br />
-
-      <button onClick={handleRegister}>
-        Register
-      </button>
-    </div>
-  );
+  }
+};
 }
 
 export default Register;
