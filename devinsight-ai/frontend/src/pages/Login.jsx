@@ -10,10 +10,21 @@ function Login() {
 
   const handleLogin = async () => {
     try {
-      const response = await api.post("/login", {
-        email,
-        password,
-      });
+      const formData = new URLSearchParams();
+
+      formData.append("username", email);
+      formData.append("password", password);
+
+      const response = await api.post(
+        "/api/auth/token",
+        formData,
+        {
+          headers: {
+            "Content-Type":
+              "application/x-www-form-urlencoded",
+          },
+        }
+      );
 
       localStorage.setItem(
         "token",
@@ -27,48 +38,50 @@ function Login() {
     } catch (error) {
       console.error(error);
 
-      alert("Login Failed ❌");
+      if (error.response) {
+        alert(error.response.data.detail);
+      } else {
+        alert("Login Failed ❌");
+      }
     }
   };
 
   return (
-    <div className="p-10">
-      <h1 className="text-4xl font-bold mb-6">
-        DevInsight AI
-      </h1>
+    <div className="min-h-screen flex justify-center items-center bg-slate-100">
+      <div className="bg-white p-8 rounded-xl shadow-lg w-96">
 
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) =>
-          setEmail(e.target.value)
-        }
-        className="border p-2 mr-2"
-      />
+        <h1 className="text-3xl font-bold text-center mb-6">
+          DevInsight AI
+        </h1>
 
-      <br />
-      <br />
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) =>
+            setEmail(e.target.value)
+          }
+          className="border p-3 w-full rounded-lg mb-4"
+        />
 
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) =>
-          setPassword(e.target.value)
-        }
-        className="border p-2 mr-2"
-      />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) =>
+            setPassword(e.target.value)
+          }
+          className="border p-3 w-full rounded-lg mb-4"
+        />
 
-      <br />
-      <br />
+        <button
+          onClick={handleLogin}
+          className="bg-blue-600 text-white w-full py-3 rounded-lg hover:bg-blue-700"
+        >
+          Login
+        </button>
 
-      <button
-        onClick={handleLogin}
-        className="bg-blue-500 text-white px-4 py-2 rounded"
-      >
-        Login
-      </button>
+      </div>
     </div>
   );
 }
