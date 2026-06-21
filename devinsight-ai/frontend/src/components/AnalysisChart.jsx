@@ -15,17 +15,20 @@ function AnalyticsChart({ data }) {
         GitHub Analytics
       </h2>
 
-      <ResponsiveContainer
-        width="100%"
-        height={350}
-      >
-        <BarChart data={data}>
-          <XAxis dataKey="name" />
-          <YAxis />
-          <Tooltip />
-          <Bar dataKey="value" />
-        </BarChart>
-      </ResponsiveContainer>
+      <div style={{ width: '100%', height: 350 }}>
+        {data && data.length > 0 ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data}>
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="value" />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <p className="text-sm text-gray-500">No data available.</p>
+        )}
+      </div>
 
     </div>
   );

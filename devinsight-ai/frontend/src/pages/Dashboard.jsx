@@ -12,7 +12,7 @@ function Dashboard() {
       const token = localStorage.getItem("token");
 
       const response = await api.post(
-        "/analyze-github",
+        "/api/github/analyze",
         { username },
         {
           headers: {
@@ -21,9 +21,12 @@ function Dashboard() {
         }
       );
 
+      console.log(response.data);
+
       setResult(response.data);
     } catch (error) {
       console.error(error);
+      console.log(error.response?.data);
       alert("Analysis Failed");
     }
   };
@@ -167,7 +170,7 @@ function Dashboard() {
           <div className="bg-white p-6 rounded-xl shadow mb-6">
 
             <h2 className="text-2xl font-bold mb-2">
-              {result.name}
+              {result.github_username}
             </h2>
 
             <p>

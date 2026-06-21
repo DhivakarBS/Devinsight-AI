@@ -2,9 +2,7 @@ import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import GithubForm from '../components/GithubForm'
 import ProfileCard from '../components/ProfileCard'
-import { analyzeProfile, getCareerRecommendations } from '../services/devinsightApi'
-import { jsPDF } from 'jspdf'
-import html2canvas from 'html2canvas'
+import api from '../api/api'
 import { PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A78BFA']
@@ -12,19 +10,33 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A78BFA']
 export default function DashboardEnhanced() {
   const [profile, setProfile] = useState(null)
   const [recommendations, setRecommendations] = useState(null)
+  const [username, setUsername] = useState("")
   const [loading, setLoading] = useState(false)
 
   const token = localStorage.getItem('token')
 
-  const onAnalyze = async (username) => {
+  const analyzeGithub = async () => {
+    if (!username) return alert('Please enter a GitHub username')
     setLoading(true)
     try {
-      const res = await analyzeProfile(username, token)
-      setProfile(res.data)
-      const rec = await getCareerRecommendations(username, token)
-      setRecommendations(rec.data)
+      const response = await api.post(
+        '/api/github/analyze',
+        { username },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      console.log(response.data)
+      setProfile(response.data)
+
+      const recRes = await api.post(
+        '/api/github/career-recommendations',
+        { username },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      console.log(recRes.data)
+      setRecommendations(recRes.data)
     } catch (e) {
       console.error(e)
+      console.log(e.response?.data)
       alert('Analysis failed')
     }
     setLoading(false)
@@ -32,26 +44,13 @@ export default function DashboardEnhanced() {
 
   const downloadPDF = async () => {
     if (!profile) return
-    const ele = document.getElementById('devinsight-report') || document.getElementById('profile-card')
-    const canvas = await html2canvas(ele, { scale: 2 })
-    const imgData = canvas.toDataURL('image/png')
-    const pdf = new jsPDF('p', 'mm', 'a4')
-    const pdfWidth = pdf.internal.pageSize.getWidth()
-    const pdfHeight = pdf.internal.pageSize.getHeight()
-    const imgProps = pdf.getImageProperties(imgData)
-    const imgWidth = pdfWidth
-    const imgHeight = (imgProps.height * imgWidth) / imgProps.width
-    let heightLeft = imgHeight
-    let position = 0
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-    heightLeft -= pdfHeight
-    while (heightLeft > 0) {
-      position -= pdfHeight
-      pdf.addPage()
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-      heightLeft -= pdfHeight
+    try {
+      const { default: generateProfilePDF } = await import('../utils/pdfHelper')
+      await generateProfilePDF(profile, recommendations)
+    } catch (e) {
+      console.error('PDF generation failed', e)
+      alert('Failed to generate PDF')
     }
-    pdf.save(`${profile.github_username}-devinsight.pdf`)
   }
 
   const pieData = profile ? Object.entries(profile.language_distribution || {}).map(([k, v]) => ({ name: k, value: v })) : []
@@ -73,7 +72,7 @@ export default function DashboardEnhanced() {
       <div id="devinsight-report">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
-          <GithubForm onAnalyze={onAnalyze} loading={loading} />
+          <GithubForm username={username} setUsername={setUsername} analyzeGithub={analyzeGithub} />
           {profile && <ProfileCard profile={profile} recommendations={recommendations} onDownload={downloadPDF} />}
         </div>
 
@@ -81,43 +80,59 @@ export default function DashboardEnhanced() {
           <div className="bg-white rounded shadow p-4">
             <h2 className="font-semibold mb-2">Language Distribution</h2>
             <div style={{ width: '100%', height: 240 }}>
-              <ResponsiveContainer>
-                <PieChart>
-                  <Pie dataKey="value" data={pieData} outerRadius={80} label>
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+              {pieData && pieData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie dataKey="value" data={pieData} outerRadius={80} label>
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-sm text-gray-500">No language distribution data available.</p>
+              )}
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white rounded shadow p-4">
               <h3 className="font-semibold mb-2">Skill Radar</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <RadarChart cx="50%" cy="50%" outerRadius={90} data={radarData}>
-                  <PolarGrid />
-                  <PolarAngleAxis dataKey="subject" />
-                  <PolarRadiusAxis />
-                  <Radar name="Skills" dataKey="A" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
-                </RadarChart>
-              </ResponsiveContainer>
+              <div style={{ width: '100%', height: 300 }}>
+                {radarData && radarData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart cx="50%" cy="50%" outerRadius={90} data={radarData}>
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="subject" />
+                      <PolarRadiusAxis />
+                      <Radar name="Skills" dataKey="A" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-sm text-gray-500">No skill data available.</p>
+                )}
+              </div>
             </div>
 
             <div className="bg-white rounded shadow p-4">
               <h3 className="font-semibold mb-2">Top Repositories (Stars)</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={barData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="stars" fill="#82ca9d" />
-                </BarChart>
-              </ResponsiveContainer>
+              <div style={{ width: '100%', height: 300 }}>
+                {barData && barData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={barData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                      <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="stars" fill="#82ca9d" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="text-sm text-gray-500">No repository data available.</p>
+                )}
+              </div>
             </div>
           </div>
         </div>

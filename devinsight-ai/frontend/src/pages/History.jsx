@@ -16,19 +16,22 @@ function History() {
       const token =
         localStorage.getItem("token");
 
-      const response = await api.get(
-        "/analysis-history",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+     const response = await api.get(
+  "/api/github/history",
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+);
+
+      console.log(response.data);
 
       setHistory(response.data);
 
     } catch (error) {
       console.error(error);
+      console.log(error.response?.data);
     }
   };
 
@@ -53,7 +56,7 @@ function History() {
           >
 
             <h2 className="text-xl font-bold">
-              {item.username}
+              {item.github_username}
             </h2>
 
             <p>Score: {item.developer_score}</p>
