@@ -83,18 +83,53 @@ def history(
     db: Session = Depends(get_db),
     user=Depends(get_current_user),
 ):
-    q = db.query(models.GithubProfile).filter(models.GithubProfile.user_id == user.id)
+    # Query all profiles for current user
+    query = db.query(models.GithubProfile).filter(
+        models.GithubProfile.user_id == user.id
+    )
     if username:
-        q = q.filter(models.GithubProfile.github_username.ilike(f"%{username}%"))
+        query = query.filter(
+            models.GithubProfile.github_username.ilike(f"%{username}%")
+        )
+    
+    # Fetch all records
+    profiles = query.all()
+    
+    # Apply language filtering in Python (case-insensitive)
     if language:
-        q = q.filter(models.GithubProfile.repositories.op("@>")([{"language": language}]))
+        profiles = [
+            profile
+            for profile in profiles
+            if any(
+                (repo.get("language") or "").lower() == language.lower()
+                for repo in (profile.repositories or [])
+            )
+        ]
+    
+    # Apply sorting AFTER filtering
     if sort_by == "developer_score":
-        q = q.order_by(models.GithubProfile.developer_score.desc())
-    results = q.all()
-    # attach skills
-    for p in results:
-        p.skills = db.query(models.Skill).filter(models.Skill.profile_id == p.id).all()
-    return results
+        profiles.sort(
+            key=lambda p: p.developer_score or 0,
+            reverse=True,
+        )
+    elif sort_by == "followers":
+        profiles.sort(
+            key=lambda p: p.followers or 0,
+            reverse=True,
+        )
+    elif sort_by == "stars":
+        profiles.sort(
+            key=lambda p: p.stars or 0,
+            reverse=True,
+        )
+    
+    # Attach skills to each profile
+    for p in profiles:
+        p.skills = db.query(models.Skill).filter(
+            models.Skill.profile_id == p.id
+        ).all()
+    
+    return profiles
 
 
 @router.post("/career-recommendations")
