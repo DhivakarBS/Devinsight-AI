@@ -44,11 +44,11 @@ def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
+    # LOGIN USING EMAIL
     user = (
         db.query(models.User)
         .filter(
-            models.User.username
-            == form_data.username
+            models.User.email == form_data.username
         )
         .first()
     )
@@ -62,9 +62,10 @@ def login(
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials"
+            detail="Invalid email or password"
         )
 
+    # KEEP USERNAME IN JWT TOKEN
     token = auth.create_access_token(
         {"sub": user.username}
     )
